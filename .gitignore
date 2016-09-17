@@ -1,0 +1,15 @@
+# Package Files #
+*.jar
+*.war
+*.ear
+
+.idea/
+*.iml
+
+build/
+target/
+
+*.snapshot
+*.meta
+*.log
+

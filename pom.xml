@@ -16,12 +16,13 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
         <dependency>
-            <groupId>org.jmockit</groupId>
-            <artifactId>jmockit</artifactId>
-            <version>1.27</version>
-            <scope>test</scope>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>2.1.0-RC.1</version>
         </dependency>
+
         <dependency>
             <!-- http://www.vogella.com/tutorials/Hamcrest/article.html-->
             <groupId>org.hamcrest</groupId>

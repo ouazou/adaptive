@@ -1,10 +1,6 @@
 package com.weareadaptive.recruitment.order.impl;
 
-import com.weareadaptive.recruitment.contract.OrderDirection;
-import com.weareadaptive.recruitment.contract.OrderStatus;
-import com.weareadaptive.recruitment.contract.OrderType;
-import com.weareadaptive.recruitment.contract.PriceTick;
-import com.weareadaptive.recruitment.contract.TradeOrder;
+import com.weareadaptive.recruitment.contract.*;
 import com.weareadaptive.recruitment.exception.TradeBookingException;
 
 import java.util.function.BiConsumer;
@@ -18,7 +14,7 @@ public class TradeOrderImpl implements TradeOrder {
   private String symbol;
   private OrderDirection direction;
   private OrderType type;
-  private OrderStatus status;
+  private volatile OrderStatus status;
   private double price;
   private int volume;
   private BiConsumer<String, TradeBookingException> failureHandler;
@@ -103,17 +99,19 @@ public class TradeOrderImpl implements TradeOrder {
 
   @Override
   public void onPriceTick(PriceTick priceTick) {
-    switch (direction) {
-      case Buy:
-        if (this.price > priceTick.getPrice()) {
+    switch (type) {
+      case Limit:
+        if ((direction == OrderDirection.Buy && this.price > priceTick.getPrice())
+                || (direction == OrderDirection.Sell && this.price < priceTick.getPrice())) {
+
           this.price = priceTick.getPrice();
         }
         break;
-      case Sell:
-        if (this.price < priceTick.getPrice()) {
-          this.price = priceTick.getPrice();
-        }
-        break;
+      case Market:
+      case Stop:
+      case TrailingStop:
+      case StopLimit:
+        throw new UnsupportedOperationException();
       default:
     }
   }
@@ -132,5 +130,15 @@ public class TradeOrderImpl implements TradeOrder {
     this.failureHandler.accept(message, ex);
   }
 
-
+  @Override
+  public String toString() {
+    return "TradeOrderImpl{" +
+            "symbol='" + symbol + '\'' +
+            ", direction=" + direction +
+            ", type=" + type +
+            ", status=" + status +
+            ", price=" + price +
+            ", volume=" + volume +
+            '}';
+  }
 }

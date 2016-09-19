@@ -22,7 +22,7 @@ public class OrderFactory {
     TradeOrderImpl tradeOrder = new TradeOrderImpl(symbol, direction, type, price, volume);
     switch (type) {
       case Limit:
-        processOrder(tradeOrder);
+        OrderTool.bookOrder(tradeOrder, tradeBooker);
         break;
       case Market:
       case Stop:
@@ -32,20 +32,6 @@ public class OrderFactory {
       default:
     }
     return tradeOrder;
-  }
-
-  private void processOrder(final TradeOrderImpl order) {
-
-    switch (order.getDirection()) {
-      case Buy:
-        OrderTool.bookByOrder(order, tradeBooker, order.getPrice(), order.getVolume());
-        break;
-      case Sell:
-        OrderTool.bookSellOrder(order, tradeBooker, order.getPrice(), order.getVolume());
-        break;
-      default:
-
-    }
   }
 
 

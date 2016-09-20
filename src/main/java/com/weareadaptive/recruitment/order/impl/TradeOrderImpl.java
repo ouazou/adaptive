@@ -1,8 +1,14 @@
 package com.weareadaptive.recruitment.order.impl;
 
-import com.weareadaptive.recruitment.contract.*;
+import com.weareadaptive.recruitment.contract.OrderDirection;
+import com.weareadaptive.recruitment.contract.OrderStatus;
+import com.weareadaptive.recruitment.contract.OrderType;
+import com.weareadaptive.recruitment.contract.PriceTick;
+import com.weareadaptive.recruitment.contract.TradeOrder;
 import com.weareadaptive.recruitment.exception.TradeBookingException;
 
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -14,11 +20,12 @@ public class TradeOrderImpl implements TradeOrder {
   private String symbol;
   private OrderDirection direction;
   private OrderType type;
-  private volatile OrderStatus status;
+  private AtomicReference<OrderStatus> status=new AtomicReference<>(OrderStatus.Active);
   private double price;
   private int volume;
   private BiConsumer<String, TradeBookingException> failureHandler;
   private Consumer<String> successHandler;
+  private Future runningTask;
 
   public TradeOrderImpl(String symbol,
                         OrderDirection direction,
@@ -28,7 +35,6 @@ public class TradeOrderImpl implements TradeOrder {
     this.symbol = symbol;
     this.direction = direction;
     this.type = type;
-    this.status = OrderStatus.Active;
     this.price = price;
     this.volume = volume;
   }
@@ -63,11 +69,13 @@ public class TradeOrderImpl implements TradeOrder {
 
   @Override
   public OrderStatus getStatus() {
-    return this.status;
+    return this.status.get();
   }
 
   public void setStatus(OrderStatus status) {
-    this.status = status;
+    if (!this.status.compareAndSet(OrderStatus.Active,status)){
+      throw new IllegalStateException("Invalid state transition");
+    }
   }
 
   public double getPrice() {
@@ -97,12 +105,28 @@ public class TradeOrderImpl implements TradeOrder {
     this.successHandler = successHandler;
   }
 
+  public BiConsumer<String, TradeBookingException> getTradeFailureHandler() {
+    return failureHandler;
+  }
+
+  public Consumer<String> getTradeSuccessHandler() {
+    return successHandler;
+  }
+
+  public Future getRunningTask() {
+    return runningTask;
+  }
+
+  public void setRunningTask(Future runningTask) {
+    this.runningTask = runningTask;
+  }
+
   @Override
   public void onPriceTick(PriceTick priceTick) {
     switch (type) {
       case Limit:
         if ((direction == OrderDirection.Buy && this.price > priceTick.getPrice())
-                || (direction == OrderDirection.Sell && this.price < priceTick.getPrice())) {
+            || (direction == OrderDirection.Sell && this.price < priceTick.getPrice())) {
 
           this.price = priceTick.getPrice();
         }
@@ -118,7 +142,9 @@ public class TradeOrderImpl implements TradeOrder {
 
   @Override
   public void cancel() {
-    this.status = OrderStatus.Cancelled;
+    if (this.status.compareAndSet(OrderStatus.Active, OrderStatus.Cancelled)) {
+      runningTask.cancel(true);
+    }
   }
 
   public void tradeSuccess(String message) {
@@ -130,15 +156,16 @@ public class TradeOrderImpl implements TradeOrder {
     this.failureHandler.accept(message, ex);
   }
 
+
   @Override
   public String toString() {
     return "TradeOrderImpl{" +
-            "symbol='" + symbol + '\'' +
-            ", direction=" + direction +
-            ", type=" + type +
-            ", status=" + status +
-            ", price=" + price +
-            ", volume=" + volume +
-            '}';
+           "symbol='" + symbol + '\'' +
+           ", direction=" + direction +
+           ", type=" + type +
+           ", status=" + status +
+           ", price=" + price +
+           ", volume=" + volume +
+           '}';
   }
 }

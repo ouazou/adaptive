@@ -14,24 +14,28 @@ import java.util.concurrent.CompletableFuture;
 public class OrderTool {
 
   public static void bookOrder(TradeOrderImpl tradeOrder, TradeBooker tradeBooker) {
-    CompletableFuture completableFuture = CompletableFuture.supplyAsync(() -> {
+    CompletableFuture tradeBookTask = CompletableFuture.supplyAsync(() -> {
       try {
-        if (tradeOrder.getDirection() == OrderDirection.Buy)
+        if (tradeOrder.getDirection() == OrderDirection.Buy) {
           tradeBooker.buy(tradeOrder.getSymbol(), tradeOrder.getVolume(), tradeOrder.getPrice());
-        else
+        } else {
           tradeBooker.sell(tradeOrder.getSymbol(), tradeOrder.getVolume(), tradeOrder.getPrice());
+        }
       } catch (TradeBookingException e) {
         tradeOrder.setStatus(OrderStatus.Failed);
         tradeOrder.tradeFailure(
-                String.format("Order %s", tradeOrder.toString()), e);
-        throw new RuntimeException(e);
+            String.format("Order %s", tradeOrder.toString()), e);
+        return null;
       }
       return tradeOrder;
     }).thenAccept(order -> {
-      order.setStatus(OrderStatus.Completed);
-      order.tradeSuccess(String.format("Order %s", tradeOrder.toString()));
+      if (order != null) {
+        order.setStatus(OrderStatus.Completed);
+        order.tradeSuccess(String.format("Order %s", tradeOrder.toString()));
 
+      }
     });
+    tradeOrder.setRunningTask(tradeBookTask);
   }
 
 
